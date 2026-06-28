@@ -1,0 +1,32 @@
+name: Build and Upload EXE
+
+on:
+  push:
+    branches:
+      - master
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+
+jobs:
+  build:
+   runs-on: windows-lastest
+   
+   steps:
+   - name: Checkout code
+     uses: actions/checkout@v2
+     with:
+       python-version: '3.x'
+
+   - name: Install dependencies
+     run: |
+       pip install pyinstaller
+       pip install pyyaml
+       pip install jsonschema
+       pip install xmlschema
+
+   - name: Upload artifact
+     uses: actions/upload-artifact@v3
+     with:
+       name: program-exe
+       path: dist/main.exe
