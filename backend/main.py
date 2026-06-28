@@ -35,6 +35,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
+UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY", "")
 
 # ---------------- TEST ----------------
 @app.get("/")
@@ -176,4 +177,34 @@ def get_weather(city: str, current_user: models.User = Depends(get_current_user)
         "temp": data["main"]["temp"],
         "description": data["weather"][0]["description"],
         "icon": data["weather"][0]["icon"],
+    }
+
+# ---------------- UNSPLASH ----------------
+@app.get("/unsplash")
+def get_unsplash_photo(
+    query: str,
+    current_user: models.User = Depends(get_current_user),
+):
+    if not UNSPLASH_ACCESS_KEY:
+        raise HTTPException(status_code=400, detail="Brak klucza Unsplash API")
+    
+    url = "https://api.unsplash.com/search/photos"
+    headers = {"Authorization": f"Client-ID {UNSPLASH_ACCESS_KEY}"}
+    params = {"query": query, "per_page": 1, "orientation": "landscape"}
+    
+    resp = requests.get(url, headers=headers, params=params)
+    if resp.status_code != 200:
+        raise HTTPException(status_code=502, detail="Błąd Unsplash API")
+    
+    data = resp.json()
+    results = data.get("results", [])
+    if not results:
+        return {"url": None}
+    
+    photo = results[0]
+    return {
+        "url": photo["urls"]["regular"],
+        "thumb": photo["urls"]["thumb"],
+        "author": photo["user"]["name"],
+        "author_link": photo["user"]["links"]["html"],
     }

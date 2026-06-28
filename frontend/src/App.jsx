@@ -35,7 +35,6 @@ function AuthPage({ onLogin }) {
       if (isRegister) {
         await api.post("/register", { email, password });
       }
-      // logowanie używa formularza (OAuth2)
       const params = new URLSearchParams();
       params.append("username", email);
       params.append("password", password);
@@ -76,16 +75,40 @@ function AuthPage({ onLogin }) {
 function Dashboard({ onLogout }) {
   const [destinations, setDestinations] = useState([]);
 
+  // ---- ETAP 2: filtrowanie i sortowanie ----
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterCountry, setFilterCountry] = useState("");
+  const [sortBy, setSortBy] = useState("name"); // "name" | "country" | "status"
+
   async function load() {
     try {
       const res = await api.get("/destinations");
       setDestinations(res.data);
     } catch {
-      onLogout(); // token wygasł
+      onLogout();
     }
   }
 
   useEffect(() => { load(); }, []);
+
+  // filtrowanie i sortowanie po stronie frontendu
+  const filtered = destinations
+    .filter((d) => {
+      if (filterStatus !== "all" && d.status !== filterStatus) return false;
+      if (filterCountry && !d.country.toLowerCase().includes(filterCountry.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "country") return a.country.localeCompare(b.country);
+      if (sortBy === "status") return a.status.localeCompare(b.status);
+      return 0;
+    });
+
+  // ---- ETAP 2: statystyki ----
+  const visited = destinations.filter((d) => d.status === "visited").length;
+  const planned = destinations.filter((d) => d.status === "planned").length;
+  const countries = new Set(destinations.map((d) => d.country)).size;
 
   return (
     <>
@@ -94,13 +117,47 @@ function Dashboard({ onLogout }) {
         <button className="btn" onClick={onLogout}>Wyloguj</button>
       </div>
       <div className="container">
+
+        {/* ---- ETAP 2: statystyki użytkownika ---- */}
+        <div className="stats-bar">
+          <div className="stat-item">📍 <strong>{destinations.length}</strong> miejsc</div>
+          <div className="stat-item">✅ <strong>{visited}</strong> odwiedzonych</div>
+          <div className="stat-item">🗓️ <strong>{planned}</strong> planowanych</div>
+          <div className="stat-item">🌍 <strong>{countries}</strong> krajów</div>
+        </div>
+
         <div className="layout">
           <div>
             <DestinationForm onAdded={load} />
-            <h2 style={{ margin: "20px 0 10px" }}>Moje miejsca ({destinations.length})</h2>
-            {destinations.map((d) => (
+
+            {/* ---- ETAP 2: filtry i sortowanie ---- */}
+            <div className="filters-bar">
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                <option value="all">Wszystkie</option>
+                <option value="planned">Planowane</option>
+                <option value="visited">Odwiedzone</option>
+              </select>
+              <input
+                placeholder="Szukaj po kraju..."
+                value={filterCountry}
+                onChange={(e) => setFilterCountry(e.target.value)}
+              />
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="name">Sortuj: A–Z nazwa</option>
+                <option value="country">Sortuj: A–Z kraj</option>
+                <option value="status">Sortuj: status</option>
+              </select>
+            </div>
+
+            <h2 style={{ margin: "20px 0 10px" }}>
+              Moje miejsca ({filtered.length}{filtered.length !== destinations.length ? ` z ${destinations.length}` : ""})
+            </h2>
+            {filtered.map((d) => (
               <DestinationCard key={d.id} dest={d} onChange={load} />
             ))}
+            {filtered.length === 0 && destinations.length > 0 && (
+              <p>Brak wyników dla wybranych filtrów.</p>
+            )}
             {destinations.length === 0 && <p>Brak miejsc. Dodaj pierwsze!</p>}
           </div>
           <div>
@@ -110,12 +167,15 @@ function Dashboard({ onLogout }) {
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution="&copy; OpenStreetMap"
                 />
-                {destinations
+                {filtered
                   .filter((d) => d.latitude && d.longitude)
                   .map((d) => (
                     <Marker key={d.id} position={[parseFloat(d.latitude), parseFloat(d.longitude)]}>
                       <Popup>
-                        <b>{d.name}</b><br />{d.country}
+                        <b>{d.name}</b><br />{d.country}<br />
+                        <span style={{ fontSize: "12px", color: d.status === "visited" ? "green" : "#888" }}>
+                          {d.status === "visited" ? "✅ Odwiedzone" : "🗓️ Planowane"}
+                        </span>
                       </Popup>
                     </Marker>
                   ))}
@@ -171,6 +231,9 @@ function DestinationForm({ onAdded }) {
 // ---------------- KARTA DESTYNACJI ----------------
 function DestinationCard({ dest, onChange }) {
   const [weather, setWeather] = useState(null);
+  // ---- ETAP 2: Unsplash ----
+  const [photo, setPhoto] = useState(null);
+  const [photoLoading, setPhotoLoading] = useState(false);
 
   async function remove() {
     await api.delete(`/destinations/${dest.id}`);
@@ -192,25 +255,73 @@ function DestinationCard({ dest, onChange }) {
     }
   }
 
+  // ---- ETAP 2: ładowanie zdjęcia z Unsplash ----
+  async function loadPhoto() {
+    setPhotoLoading(true);
+    try {
+      const res = await api.get(`/unsplash?query=${encodeURIComponent(dest.name)}`);
+      setPhoto(res.data);
+    } catch {
+      setPhoto({ error: true });
+    } finally {
+      setPhotoLoading(false);
+    }
+  }
+
+  // ---- ETAP 2: link do Google Flights ----
+  function openGoogleFlights() {
+    const query = encodeURIComponent(dest.name);
+    window.open(`https://www.google.com/travel/flights?q=Flights+to+${query}`, "_blank");
+  }
+
   return (
     <div className="card">
+      {/* ---- ETAP 2: zdjęcie z Unsplash ---- */}
+      {photo && !photo.error && photo.url && (
+        <div style={{ marginBottom: "10px", borderRadius: "8px", overflow: "hidden", position: "relative" }}>
+          <img
+            src={photo.url}
+            alt={dest.name}
+            style={{ width: "100%", height: "160px", objectFit: "cover", display: "block" }}
+          />
+          <a
+            href={photo.author_link + "?utm_source=wandermap&utm_medium=referral"}
+            target="_blank"
+            rel="noreferrer"
+            style={{ position: "absolute", bottom: "4px", right: "6px", fontSize: "10px", color: "#fff", background: "rgba(0,0,0,0.5)", padding: "2px 5px", borderRadius: "4px", textDecoration: "none" }}
+          >
+            📷 {photo.author} / Unsplash
+          </a>
+        </div>
+      )}
+
       <h3>{dest.name}</h3>
       <p style={{ color: "#666", marginBottom: "8px" }}>{dest.country}</p>
       {dest.description && <p style={{ marginBottom: "8px" }}>{dest.description}</p>}
       <span className={`badge ${dest.status === "visited" ? "badge-visited" : "badge-planned"}`}>
         {dest.status === "visited" ? "Odwiedzone" : "Planowane"}
       </span>
+
       {weather && !weather.error && (
         <p style={{ marginTop: "8px" }}>🌡️ {weather.temp}°C, {weather.description}</p>
       )}
       {weather && weather.error && (
         <p style={{ marginTop: "8px", color: "#c0392b" }}>Brak pogody dla tego miejsca</p>
       )}
-      <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+      {photo && photo.error && (
+        <p style={{ marginTop: "8px", color: "#c0392b" }}>Brak zdjęcia dla tego miejsca</p>
+      )}
+
+      <div style={{ display: "flex", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
         <button className="btn btn-small" onClick={toggleStatus}>
           {dest.status === "planned" ? "Oznacz odwiedzone" : "Cofnij"}
         </button>
-        <button className="btn btn-small" onClick={loadWeather}>Pogoda</button>
+        <button className="btn btn-small" onClick={loadWeather}>🌤️ Pogoda</button>
+        {/* ---- ETAP 2: przyciski Unsplash i Google Flights ---- */}
+        <button className="btn btn-small" onClick={loadPhoto} disabled={photoLoading}>
+          {photoLoading ? "Ładuję..." : "🖼️ Zdjęcie"}
+        </button>
+        <button className="btn btn-small" onClick={openGoogleFlights}>✈️ Loty</button>
         <button className="btn btn-small btn-danger" onClick={remove}>Usuń</button>
       </div>
     </div>
