@@ -8,16 +8,16 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models
 
-# --- konfiguracja ---
+
 SECRET_KEY = "super-tajny-klucz-zmien-mnie-na-produkcji-123456"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24h
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
 def hash_password(password: str) -> str:
-    pwd_bytes = password.encode("utf-8")[:72]  # bcrypt limit: 72 bajty
+    pwd_bytes = password.encode("utf-8")[:72] 
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
