@@ -22,7 +22,7 @@ class Destination(Base):
     name = Column(String, nullable=False)
     country = Column(String, nullable=False)
     description = Column(Text, nullable=True)
-    status = Column(String, default="planned")  # planned / visited
+    status = Column(String, default="planned") 
     visit_date = Column(Date, nullable=True)
     latitude = Column(String, nullable=True)
     longitude = Column(String, nullable=True)
