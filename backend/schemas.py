@@ -3,7 +3,6 @@ from datetime import date, datetime
 from typing import Optional
 
 
-# ---------- User ----------
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
@@ -18,13 +17,11 @@ class UserOut(BaseModel):
         from_attributes = True
 
 
-# ---------- Token ----------
 class Token(BaseModel):
     access_token: str
     token_type: str
 
 
-# ---------- Destination ----------
 class DestinationBase(BaseModel):
     name: str
     country: str
