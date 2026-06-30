@@ -15,12 +15,12 @@ from auth import (
     get_current_user,
 )
 
-# tworzy tabele w bazie na starcie
+
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="WanderMap API")
 
-# pozwala frontendowi (React) gadać z backendem
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://localhost:3000"],
@@ -37,13 +37,11 @@ load_dotenv()
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
 UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY", "")
 
-# ---------------- TEST ----------------
 @app.get("/")
 def root():
     return {"message": "WanderMap API działa!"}
 
 
-# ---------------- AUTH ----------------
 @app.post("/register", response_model=schemas.UserOut)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     existing = db.query(models.User).filter(models.User.email == user.email).first()
@@ -76,7 +74,6 @@ def read_me(current_user: models.User = Depends(get_current_user)):
     return current_user
 
 
-# ---------------- DESTINATIONS (CRUD) ----------------
 @app.post("/destinations", response_model=schemas.DestinationOut)
 def create_destination(
     dest: schemas.DestinationCreate,
@@ -144,7 +141,6 @@ def delete_destination(
     return {"message": "Destynacja usunięta"}
 
 
-# pomocnicza funkcja: pobiera destynację i sprawdza, czy należy do usera
 def _get_owned_destination(dest_id, db, current_user):
     dest = db.query(models.Destination).filter(
         models.Destination.id == dest_id
@@ -156,7 +152,6 @@ def _get_owned_destination(dest_id, db, current_user):
     return dest
 
 
-# ---------------- WEATHER ----------------
 @app.get("/weather")
 def get_weather(city: str, current_user: models.User = Depends(get_current_user)):
     if OPENWEATHER_API_KEY == "TWOJ_KLUCZ_TUTAJ":
@@ -179,7 +174,6 @@ def get_weather(city: str, current_user: models.User = Depends(get_current_user)
         "icon": data["weather"][0]["icon"],
     }
 
-# ---------------- UNSPLASH ----------------
 @app.get("/unsplash")
 def get_unsplash_photo(
     query: str,
