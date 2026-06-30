@@ -71,14 +71,12 @@ function AuthPage({ onLogin }) {
   );
 }
 
-// ---------------- PANEL GŁÓWNY ----------------
+
 function Dashboard({ onLogout }) {
   const [destinations, setDestinations] = useState([]);
-
-  // ---- ETAP 2: filtrowanie i sortowanie ----
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterCountry, setFilterCountry] = useState("");
-  const [sortBy, setSortBy] = useState("name"); // "name" | "country" | "status"
+  const [sortBy, setSortBy] = useState("name"); 
 
   async function load() {
     try {
@@ -91,7 +89,6 @@ function Dashboard({ onLogout }) {
 
   useEffect(() => { load(); }, []);
 
-  // filtrowanie i sortowanie po stronie frontendu
   const filtered = destinations
     .filter((d) => {
       if (filterStatus !== "all" && d.status !== filterStatus) return false;
@@ -105,7 +102,6 @@ function Dashboard({ onLogout }) {
       return 0;
     });
 
-  // ---- ETAP 2: statystyki ----
   const visited = destinations.filter((d) => d.status === "visited").length;
   const planned = destinations.filter((d) => d.status === "planned").length;
   const countries = new Set(destinations.map((d) => d.country)).size;
@@ -118,7 +114,6 @@ function Dashboard({ onLogout }) {
       </div>
       <div className="container">
 
-        {/* ---- ETAP 2: statystyki użytkownika ---- */}
         <div className="stats-bar">
           <div className="stat-item">📍 <strong>{destinations.length}</strong> miejsc</div>
           <div className="stat-item">✅ <strong>{visited}</strong> odwiedzonych</div>
@@ -130,7 +125,6 @@ function Dashboard({ onLogout }) {
           <div>
             <DestinationForm onAdded={load} />
 
-            {/* ---- ETAP 2: filtry i sortowanie ---- */}
             <div className="filters-bar">
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                 <option value="all">Wszystkie</option>
@@ -188,7 +182,6 @@ function Dashboard({ onLogout }) {
   );
 }
 
-// ---------------- FORMULARZ DODAWANIA ----------------
 function DestinationForm({ onAdded }) {
   const [form, setForm] = useState({
     name: "", country: "", description: "",
@@ -228,10 +221,8 @@ function DestinationForm({ onAdded }) {
   );
 }
 
-// ---------------- KARTA DESTYNACJI ----------------
 function DestinationCard({ dest, onChange }) {
   const [weather, setWeather] = useState(null);
-  // ---- ETAP 2: Unsplash ----
   const [photo, setPhoto] = useState(null);
   const [photoLoading, setPhotoLoading] = useState(false);
 
@@ -255,7 +246,6 @@ function DestinationCard({ dest, onChange }) {
     }
   }
 
-  // ---- ETAP 2: ładowanie zdjęcia z Unsplash ----
   async function loadPhoto() {
     setPhotoLoading(true);
     try {
@@ -268,7 +258,7 @@ function DestinationCard({ dest, onChange }) {
     }
   }
 
-  // ---- ETAP 2: link do Google Flights ----
+
   function openGoogleFlights() {
     const query = encodeURIComponent(dest.name);
     window.open(`https://www.google.com/travel/flights?q=Flights+to+${query}`, "_blank");
@@ -276,7 +266,6 @@ function DestinationCard({ dest, onChange }) {
 
   return (
     <div className="card">
-      {/* ---- ETAP 2: zdjęcie z Unsplash ---- */}
       {photo && !photo.error && photo.url && (
         <div style={{ marginBottom: "10px", borderRadius: "8px", overflow: "hidden", position: "relative" }}>
           <img
